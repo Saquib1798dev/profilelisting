@@ -2,16 +2,17 @@ module Api
   module V1
     class UserDetailsController < ApplicationController
       before_action :get_user
+      before_action :get_complete_image_url, only: [:show, :update]
       before_action :update_type_field, only: [:generate_otp]
       before_action :compare_current_password, only: [:change_password]
 
       def show
-        render json: { data: @user, avatar: Rails.application.routes.url_helpers.rails_blob_path(@user.avatar, only_path: true) }
+        render json: { data: @user, avatar: @complete_image_url }
       end
 
       def update
         @user.update(user_params)
-        render json: { data: @user, avatar: Rails.application.routes.url_helpers.rails_blob_path(@user.avatar, only_path: true )        }
+        render json: { data: @user, avatar:  @complete_image_url  }
       end
 
       def verify_otp
@@ -92,6 +93,10 @@ module Api
         end
       end
 
+      def get_complete_image_url
+        @base_url = "#{request.protocol}#{request.host_with_port}"
+        @complete_image_url = @base_url+Rails.application.routes.url_helpers.rails_blob_path(@user.avatar, only_path: true)
+      end
 
       def create_otp(user, type)
         @otp = user.otps.create(otp_digits: rand(1000..9999), otp_type: type, otp_verified: false, otp_token: SecureRandom.hex)
