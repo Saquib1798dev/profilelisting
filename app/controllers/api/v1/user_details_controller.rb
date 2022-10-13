@@ -6,7 +6,7 @@ module Api
       before_action :compare_current_password, only: [:change_password]
 
       def show
-        render json: @user
+        render json: { data: @user, avatar: Rails.application.routes.url_helpers.rails_blob_path(@user.avatar, only_path: true) }
       end
 
       def update
