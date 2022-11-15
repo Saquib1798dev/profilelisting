@@ -1,6 +1,7 @@
 module Api
   module V1
     class UserDetailsController < ApplicationController
+      before_action :authenticate
       before_action :get_user
       before_action :get_complete_image_url, only: [:show, :update]
       before_action :update_type_field, only: [:generate_otp]
@@ -94,8 +95,10 @@ module Api
       end
 
       def get_complete_image_url
-        @base_url = "#{request.protocol}#{request.host_with_port}"
-        @complete_image_url = @base_url+Rails.application.routes.url_helpers.rails_blob_path(@user.avatar, only_path: true)
+        if @user.avatar.present?
+          @base_url = "#{request.protocol}#{request.host_with_port}"
+          @complete_image_url = @base_url+Rails.application.routes.url_helpers.rails_blob_path(@user.avatar, only_path: true)
+        end 
       end
 
       def create_otp(user, type)
@@ -104,6 +107,21 @@ module Api
 
       def get_user
         @user = User.find(params[:id])
+      end
+
+      def authenticate
+        render json: { message: "Token Not present", success: false } and return if request.headers['authorization'].blank?
+        begin
+          data = JWT.decode(request.headers['authorization'].split(' ').last,"", false)
+        rescue StandardError => e
+          return render json: {message: "Invalid Token", success: false }
+        else
+          exp_time = Time.at(data[0]["exp"])
+          user = User.find(data[0]["sub"])
+          unless Time.now < exp_time
+            return  render json: { message: "Token Expired", success: false }
+          end
+        end 
       end
     end
   end
